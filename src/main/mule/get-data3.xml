@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="3469d130-40a5-413b-8b9b-e67d3ad7b296" doc:description="This application is to test how to send one Uriparameter and get data from the databasees. the database i use is called northwind and the table is Employee and the column name is employeeId. this returns java output, i transform it to csv and write it to disk. but in order to write the value of the Uriparameters to another disk we have to set them to a variable since our UriParam values(or)  values of attributes in general are going to change across the flow. so we have to add one set variable immediately after our listener coz we only want to store a single Uriparam value." >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="d5c5ef96-0351-47ef-96f8-0b9890d216c8" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="Asq@22w0rd#" database="northwind" />
+	</db:config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="b3a9b6d0-d64c-4874-b631-b7d4cd521279" >
+		<file:connection workingDir="C:\Mulesoft\datafromdatabasees" />
+	</file:config>
+	<flow name="get-data3Flow" doc:id="6d8dd447-2b4a-4bed-a334-a9b09cd1f642" >
+		<http:listener doc:name="Listener" doc:id="be387f57-d116-452e-9536-b76fc549a985" config-ref="HTTP_Listener_config" path="get-data/{employeeId}" doc:description="This application is to test how to send one Uriparameter and get data from the databasees. the database i use is called northwind and the table is Employee and the column name is employeeId. this returns java output, i transform it to csv and write it to disk. but in order to write the value of the Uriparameters to another disk we have to set them to a variable since our UriParam values(or)  values of attributes in general are going to change across the flow. so we have to add one set variable immediately after our listener coz we only want to store a single Uriparam value."/>
+		<set-variable value="#[attributes.uriParams.employeeId]" doc:name="Set EmployeeID" doc:id="c59cc40a-111b-47ff-a32b-8fe32e088098" variableName="employeeId"/>
+		<logger level="INFO" doc:name="Logger" doc:id="c2f92876-74fb-4b52-b027-d73452bcbee8" message='#["The Employee ID submitted is: " ++ attributes.uriParams.employeeId]'/>
+		<db:select doc:name="Get data from MySQL" doc:id="1616ecc8-e1f9-43b4-b1fe-cf36a98dbb09" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from employee where employeeId= :employeeId
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{'employeeId' : attributes.uriParams.employeeId}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="To csv" doc:id="177be2a4-6109-430b-9350-fae06b7632c2" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/csv
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="Write To Disk" doc:id="57e5818e-3037-4a2d-855c-e134dd5877f2" config-ref="File_Config" path='#[vars.employeeId ++ ".csv"]'/>
+	</flow>
+</mule>
